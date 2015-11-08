@@ -65,24 +65,7 @@ class tool_qtypeorder_form extends moodleform {
         // action buttons
         // ==================================
         //
-        $label = get_string('go');
-        $this->add_action_buttons(true, $label);
-    }
-
-    /**
-     * add_heading
-     *
-     * @param object $mform
-     * @param string $name
-     * @param string $plugin
-     * @param boolean $expanded
-     */
-    public function add_heading($mform, $name, $plugin, $expanded) {
-        $label = get_string($name, $plugin);
-        $mform->addElement('header', $name, $label);
-        if (method_exists($mform, 'setExpanded')) {
-            $mform->setExpanded($name, $expanded);
-        }
+        $this->add_action_buttons(true, get_string('go'));
     }
 
     /**
