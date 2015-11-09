@@ -86,7 +86,7 @@ class tool_qtypeorder_form extends moodleform {
         }
 
         $feedbackfields = array('correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback');
-        $purge_all_caches = false;
+        $reset_caches = false;
 
         // migrate each $order record
         foreach ($orders as $order) {
@@ -143,13 +143,14 @@ class tool_qtypeorder_form extends moodleform {
                     $DB->delete_records('question_order_sub', array('question' => $questionid));
                 }
 
-                //
-                $purge_all_caches = true;
+                // force caches to be refreshed
+                $reset_caches = true;
             }
         }
 
-        if ($purge_all_caches) {
-            purge_all_caches();
+        if ($reset_caches) {
+            $DB->reset_caches();
+            //purge_all_caches();
         }
     }
 }
