@@ -143,6 +143,21 @@ class tool_qtypeorder_form extends moodleform {
                     $DB->delete_records('question_order_sub', array('question' => $questionid));
                 }
 
+                // convert any responses
+                //$select = 'qasd.id, qasd.attemptstepid, qasd.name qasd.value, '
+                //          'qas.questionattemptid, qas.sequencenumber, qas.state, qas.fraction, qas.timecreated, qas.userid, '.
+                //          'qa.questionusageid, qa.slot, qa.behaviour, qa.questionid, qa.variant, qa.maxmark, qa.minfraction, '.
+                //          'qa.maxfraction, qa.flagged, qa.questionsummary, qa.rightanswer, qa.responsesummary, qa.timemodified';
+                //$from   = '{question_attempt_step_data} qasd '.
+                //          'LEFT JOIN {question_attempt_steps} qas ON qas.id = qasd.attemptstepid '.
+                //          'LEFT JOIN {question_attempts} qa ON qa.id = qas.questionattemptid';
+                //$where  = 'qa.questionid = ?';
+                //$params = array($questionid);
+                //if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where", $params)) {
+                //    foreach ($datas as $data) {
+                //    }
+                //}
+
                 // force caches to be refreshed
                 $reset_caches = true;
             }
