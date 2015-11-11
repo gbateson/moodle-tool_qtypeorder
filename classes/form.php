@@ -88,12 +88,19 @@ class tool_qtypeorder_form extends moodleform {
         $feedbackfields = array('correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback');
         $reset_caches = false;
 
+        // search/replace strings to remove tags from simple <p>...</p> in question text
+        $qtext_search = '/^\s*<p>\s*([^<>]*)\s*<\/p>\s*$/';
+        $qtext_replace = '$1';
+
         // password salt may be needed to create unique md5 keys
         if (isset($CFG->passwordsaltmain)) {
             $salt = $CFG->passwordsaltmain;
         } else {
             $salt = ''; // complex_random_string()
         }
+
+        // cache of which question_attempts have been updated
+        $question_attempts = array();
 
         // migrate each $order record
         foreach ($orders as $order) {
@@ -140,14 +147,20 @@ class tool_qtypeorder_form extends moodleform {
                     $DB->delete_records('question_order_sub', array('question' => $questionid));
 
                     foreach ($subs as $id => $sub) {
+
+                        // tidy up question text
+                        $sub->questiontext = preg_replace($qtext_search, $qtext_replace, $sub->questiontext);
+
+                        // check this response has not already been converted
+                        //  - should only happen during development of this tool
                         $params = array('question' => $questionid,
                                         'fraction' => floatval($sub->answertext));
                         if ($answer = $DB->get_records('question_answers', $params)) {
-                            // shoud only happen during development of this tool
                             $answer = reset($answer);
+                            $answer->answer = $sub->questiontext;
+                            $DB->update_record('question_answers', $answer);
                         } else {
-                            // tidy up question text
-                            $sub->questiontext = preg_replace('/^\s*<p>\s*([^<>]*)\s*<\/p>\s*$/', '$1', $sub->questiontext);
+
                             // add new answer record
                             $answer = (object)array(
                                 'question' => $questionid,
@@ -159,8 +172,10 @@ class tool_qtypeorder_form extends moodleform {
                             );
                             $answer->id = $DB->insert_record('question_answers', $answer);
                         }
+
+                        // cache secondary values for this $sub record
                         $subs[$id]->answerid = $answer->id;
-                        $subs[$id]->md5key = 'ordering_item_'.md5($salt.$sub->answertext);
+                        $subs[$id]->md5key = 'ordering_item_'.md5($salt.$sub->questiontext);
                     }
 
                     // define the order of the correct response
@@ -204,6 +219,18 @@ class tool_qtypeorder_form extends moodleform {
                 if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where ORDER BY $order", $params)) {
 
                     foreach ($datas as $data) {
+
+                        $id = $data->questionattemptid;
+                        if (empty($question_attempts[$id])) {
+                            $question_attempts[$id] = true;
+                            if ($question_attempt = $DB->get_record('question_attempts', array('id' => $id))) {
+                                $question_attempt->questionsummary = preg_replace('\s*\{[^\}]*\}\s*$', '', $question_attempt->questionsummary);
+                                $question_attempt->rightanswer     = '';
+                                $question_attempt->responsesummary = '';
+                                $DB->insert_record('question_attempts', $question_attempt);
+                            }
+                        }
+
                         switch ($data->name) {
 
                             case '_choiceorder':
@@ -260,8 +287,7 @@ class tool_qtypeorder_form extends moodleform {
         }
 
         if ($reset_caches) {
-            $DB->reset_caches();
-            //purge_all_caches();
+            $DB->purge_all_caches();
         }
     }
 
