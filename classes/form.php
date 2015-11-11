@@ -81,7 +81,10 @@ class tool_qtypeorder_form extends moodleform {
         if (! $data->confirm) {
             return false;
         }
-        if (! $orders = $DB->get_records('question_order')) {
+        if (! $rs = $DB->get_recordset('question_order', array())) {
+            return false;
+        }
+        if (! $count = $DB->count_records('question_order', array())) {
             return false;
         }
 
@@ -91,6 +94,9 @@ class tool_qtypeorder_form extends moodleform {
         // search/replace strings to remove tags from simple <p>...</p> in question text
         $qtext_search = '/^\s*<p>\s*([^<>]*)\s*<\/p>\s*$/';
         $qtext_replace = '$1';
+
+        // search string to locate qtype_order info in question summary
+        $qsummary_search = '/\s*\{[^\}]*\}\s*$/';
 
         // password salt may be needed to create unique md5 keys
         if (isset($CFG->passwordsaltmain)) {
@@ -102,8 +108,14 @@ class tool_qtypeorder_form extends moodleform {
         // cache of which question_attempts have been updated
         $question_attempts = array();
 
+        // set up progress bar
+        $index = 0;
+        $bar = new progress_bar('fixsumgrades', 500, true);
+        $strupdating = get_string('migratingorderquestions', 'tool_qtypeorder');
+
         // migrate each $order record
-        foreach ($orders as $order) {
+        foreach ($rs as $order) {
+            upgrade_set_timeout(); // 3 mins
 
             $questionid = $order->question;
             $layouttype = ($order->horizontal ? 1 : 0);
@@ -206,7 +218,8 @@ class tool_qtypeorder_form extends moodleform {
                 // initialize array use to hold unique md5keys for answers
                 $md5keys = array();
 
-                // convert any responses (stored in the "question_attempt_step_data" table)
+                // convert any responses for this question
+                // (stored in the "question_attempt_step_data" table)
                 $select = 'd.id, d.attemptstepid, d.name, d.value, '.
                           's.questionattemptid, s.sequencenumber, s.state, '.
                           'a.questionusageid, a.slot, a.questionid, a.questionsummary, a.rightanswer, a.responsesummary';
@@ -224,7 +237,7 @@ class tool_qtypeorder_form extends moodleform {
                         if (empty($question_attempts[$id])) {
                             $question_attempts[$id] = true;
                             if ($question_attempt = $DB->get_record('question_attempts', array('id' => $id))) {
-                                $question_attempt->questionsummary = preg_replace('\s*\{[^\}]*\}\s*$', '', $question_attempt->questionsummary);
+                                $question_attempt->questionsummary = preg_replace($qsummary_search, '', $question_attempt->questionsummary);
                                 $question_attempt->rightanswer     = '';
                                 $question_attempt->responsesummary = '';
                                 $DB->insert_record('question_attempts', $question_attempt);
@@ -263,28 +276,37 @@ class tool_qtypeorder_form extends moodleform {
                                     if ($data->name==$firstname) {
                                         $md5keys = array();
                                     }
-                                    if ($i = intval($data->value)) {
-                                        $id = $currentresponse[$i-1];
-                                        $md5keys[] = $subs[$id]->md5key;
+                                    $i = intval(substr($data->name, 3));
+                                    if ($id = intval($data->value)) {
+                                        $id = $currentresponse[$id-1];
+                                        $md5keys[$i] = $subs[$id]->md5key;
                                     }
                                     if ($data->name==$lastname) {
                                         // update this $data record
+                                        ksort($md5keys);
                                         $this->update_step_data($data, 'response_'.$questionid, implode(',', $md5keys));
                                     } else {
                                         // remove this $data record
                                         $this->delete_step_data($data);
                                     }
                                 } else {
+                                    // unknown step data - shouldn't happen !!
                                     $this->delete_step_data($data);
                                 }
-                        }
-                    }
-                }
+                        } // end switch $data->name
+                    } // end foreach $datas
+                } // end if $datas
 
                 // force caches to be refreshed
                 $reset_caches = true;
-            }
-        }
+
+            } // end if insert_record
+
+            $index++;
+            $bar->update($index, $count, $strupdating.": ($index/$count)");
+
+        } // end foreach $rs
+        $rs->close();
 
         if ($reset_caches) {
             $DB->purge_all_caches();

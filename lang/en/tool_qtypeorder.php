@@ -37,4 +37,5 @@ To run this tool ...
 * click the "Go" button.
 
 There are currently {$a} OLD Ordering questions on this Moodle site.';
+$string['migratingorderquestions'] = 'Migrating Order questions';
 $string['noquestions'] = 'There are no OLD ordering questions on this Moodle site, so the migration cannot continue.';
