@@ -72,7 +72,7 @@ class tool_qtypeorder_form extends moodleform {
      * migrate_qtype_order
      */
     public function migrate_qtype_order() {
-        global $DB;
+        global $CFG, $DB;
 
         // get form data
         $data = $this->get_data();
@@ -87,6 +87,13 @@ class tool_qtypeorder_form extends moodleform {
 
         $feedbackfields = array('correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback');
         $reset_caches = false;
+
+        // password salt may be needed to create unique md5 keys
+        if (isset($CFG->passwordsaltmain)) {
+            $salt = $CFG->passwordsaltmain;
+        } else {
+            $salt = ''; // complex_random_string()
+        }
 
         // migrate each $order record
         foreach ($orders as $order) {
@@ -128,35 +135,124 @@ class tool_qtypeorder_form extends moodleform {
 
                 // transfer the subquestions (= items to be ordered)
                 if ($subs = $DB->get_records('question_order_sub', array('question' => $questionid), 'answertext')) {
-                    foreach ($subs as $sub) {
-                        $answer = (object)array(
-                            'question' => $questionid,
-                            'answer'   => $sub->questiontext,
-                            'answerformat' => $sub->questiontextformat,
-                            'fraction' => floatval($sub->answertext),
-                            'feedback' => '',
-                            'feedbackformat' => FORMAT_MOODLE
-                        );
-                        $answer->id = $DB->insert_record('question_answers', $answer);
-                    }
+
                     // remove old subquestions
                     $DB->delete_records('question_order_sub', array('question' => $questionid));
+
+                    foreach ($subs as $id => $sub) {
+                        $params = array('question' => $questionid,
+                                        'fraction' => floatval($sub->answertext));
+                        if ($answer = $DB->get_records('question_answers', $params)) {
+                            // shoud only happen during development of this tool
+                            $answer = reset($answer);
+                        } else {
+                            // tidy up question text
+                            $sub->questiontext = preg_replace('/^\s*<p>\s*([^<>]*)\s*<\/p>\s*$/', '$1', $sub->questiontext);
+                            // add new answer record
+                            $answer = (object)array(
+                                'question' => $questionid,
+                                'answer'   => $sub->questiontext,
+                                'answerformat' => $sub->questiontextformat,
+                                'fraction' => floatval($sub->answertext),
+                                'feedback' => '',
+                                'feedbackformat' => FORMAT_MOODLE
+                            );
+                            $answer->id = $DB->insert_record('question_answers', $answer);
+                        }
+                        $subs[$id]->answerid = $answer->id;
+                        $subs[$id]->md5key = 'ordering_item_'.md5($salt.$sub->answertext);
+                    }
+
+                    // define the order of the correct response
+                    //  - referred to as "choiceorder" in qtype_order
+                    //  - should be the same as the "_choiceorder" step data
+                    $correctresponse = array_merge(array(0), array_keys($subs));
+                    unset($correctresponse[0]); // remove item with index 0
+
+                    // initialize the order of the current response
+                    //  - referred to as "stemorder" in qtype_order
+                    //  - will be populated from "_stemorder" step data
+                    //  - will be updated from "sub[0-9]+" step data
+                    $currentresponse = array();
+
+                    // set names of first and last attempt_step_data records
+                    // that are used to denote the current order of items
+                    $firstname = 'sub0';
+                    $lastname = 'sub'.(count($subs) - 1);
+
+                } else {
+                    // shouldn't happen !!
+                    $correctresponse = array();
+                    $currentresponse = array();
+                    $firstname = '';
+                    $lastname = '';
                 }
 
-                // convert any responses
-                //$select = 'qasd.id, qasd.attemptstepid, qasd.name qasd.value, '
-                //          'qas.questionattemptid, qas.sequencenumber, qas.state, qas.fraction, qas.timecreated, qas.userid, '.
-                //          'qa.questionusageid, qa.slot, qa.behaviour, qa.questionid, qa.variant, qa.maxmark, qa.minfraction, '.
-                //          'qa.maxfraction, qa.flagged, qa.questionsummary, qa.rightanswer, qa.responsesummary, qa.timemodified';
-                //$from   = '{question_attempt_step_data} qasd '.
-                //          'LEFT JOIN {question_attempt_steps} qas ON qas.id = qasd.attemptstepid '.
-                //          'LEFT JOIN {question_attempts} qa ON qa.id = qas.questionattemptid';
-                //$where  = 'qa.questionid = ?';
-                //$params = array($questionid);
-                //if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where", $params)) {
-                //    foreach ($datas as $data) {
-                //    }
-                //}
+                // initialize array use to hold unique md5keys for answers
+                $md5keys = array();
+
+                // convert any responses (stored in the "question_attempt_step_data" table)
+                $select = 'd.id, d.attemptstepid, d.name, d.value, '.
+                          's.questionattemptid, s.sequencenumber, s.state, '.
+                          'a.questionusageid, a.slot, a.questionid, a.questionsummary, a.rightanswer, a.responsesummary';
+                $from   = '{question_attempt_step_data} d '.
+                          'LEFT JOIN {question_attempt_steps} s ON s.id = d.attemptstepid '.
+                          'LEFT JOIN {question_attempts} a ON a.id = s.questionattemptid';
+                $where  = 'a.questionid = ?';
+                $order  = 'a.questionusageid, a.slot, s.sequencenumber, d.name';
+                $params = array($questionid);
+                if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where ORDER BY $order", $params)) {
+
+                    foreach ($datas as $data) {
+                        switch ($data->name) {
+
+                            case '_choiceorder':
+                                $this->convert_step_data($subs, $data, '_correctresponse', $correctresponse);
+                                break;
+
+                            case '_stemorder':
+                                $this->convert_step_data($subs, $data, '_currentresponse', $currentresponse);
+                                $lastname = 'sub'.(count($currentresponse) - 1);
+                                break;
+
+                            case '_correctresponse':
+                                // these data records have already been migrated
+                                // and are waiting for the question type
+                                // to be changed from "order" to "ordering"
+                                // this should only happen during development of this tool
+                                $this->revert_step_data($subs, $data, $correctresponse);
+                                break;
+
+                            case '_currentresponse':
+                                // these data records have already been migrated
+                                // and are waiting for the question type
+                                // to be changed from "order" to "ordering"
+                                // this should only happen during development of this tool
+                                $this->revert_step_data($subs, $data, $currentresponse);
+                                break;
+
+                            default:
+                                if (substr($data->name, 0, 3)=='sub') {
+                                    if ($data->name==$firstname) {
+                                        $md5keys = array();
+                                    }
+                                    if ($i = intval($data->value)) {
+                                        $id = $currentresponse[$i-1];
+                                        $md5keys[] = $subs[$id]->md5key;
+                                    }
+                                    if ($data->name==$lastname) {
+                                        // update this $data record
+                                        $this->update_step_data($data, 'response_'.$questionid, implode(',', $md5keys));
+                                    } else {
+                                        // remove this $data record
+                                        $this->delete_step_data($data);
+                                    }
+                                } else {
+                                    $this->delete_step_data($data);
+                                }
+                        }
+                    }
+                }
 
                 // force caches to be refreshed
                 $reset_caches = true;
@@ -167,5 +263,77 @@ class tool_qtypeorder_form extends moodleform {
             $DB->reset_caches();
             //purge_all_caches();
         }
+    }
+
+    /**
+     * convert_step_data
+     *     convert ids from DB table: question_order_sub (used by qtype_order)
+     *          to ids from DB table: question_answer (used by qtype_ordering)
+     *     update record in DB table: question_attempt_step_data
+     *
+     * @param array  $subs records from DB table: question_order_subs
+     * @param object $olddata a record from DB table: question_attempt_step_data
+     * @param string $newname the new name for this $olddata record
+     * @param array  $ids (passed by reference) array of question_order_subs ids
+     * @return boolean TRUE if $olddata record was updated; otherwise FALSE
+     */
+    protected function convert_step_data($subs, $olddata, $newname, &$ids) {
+        global $DB;
+        $ids = $olddata->value;
+        $ids = explode(',', $ids);
+        $ids = array_filter($ids);
+        $ids = array_intersect($ids, array_keys($subs));
+        $newvalue = array();
+        foreach ($ids as $i => $id) {
+            $newvalue[$i] = $subs[$id]->answerid;
+        }
+        $newvalue = implode(',', $newvalue);
+        return $this->update_step_data($olddata, $newname, $newvalue);
+    }
+
+    /**
+     * revert_step_data
+     *
+     * @param object $data a record from DB table: question_attempt_step_data
+     * @param array  $ids (passed by reference) array of question_order_subs ids
+     */
+    protected function revert_step_data($subs, $data, &$ids) {
+        $ids = explode(',', $data->value);
+        foreach ($ids as $i => $id) {
+            foreach ($subs as $sub) {
+                if ($sub->answerid==$id) {
+                    $ids[$i] = $sub->id;
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * update_step_data
+     *
+     * @param object $olddata a record from DB table: question_attempt_step_data
+     * @param string $newname
+     * @param string $newvalue
+     */
+    protected function update_step_data($olddata, $newname, $newvalue) {
+        global $DB;
+        $newdata = (object)array(
+            'id'            => $olddata->id,
+            'attemptstepid' => $olddata->attemptstepid,
+            'name'          => $newname,
+            'value'         => $newvalue,
+        );
+        return $DB->update_record('question_attempt_step_data', $newdata);
+    }
+
+    /**
+     * delete_step_data
+     *
+     * @param object $data a record from DB table: question_attempt_step_data
+     */
+    protected function delete_step_data($data) {
+        global $DB;
+        return $DB->delete_records('question_attempt_step_data', array('id' => $data->id));
     }
 }
