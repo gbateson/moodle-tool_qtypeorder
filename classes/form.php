@@ -115,7 +115,7 @@ class tool_qtypeorder_form extends moodleform {
 
         // migrate each $order record
         foreach ($rs as $order) {
-            upgrade_set_timeout(); // 3 mins
+            //upgrade_set_timeout(); // 3 mins
 
             $questionid = $order->question;
             $layouttype = ($order->horizontal ? 1 : 0);
@@ -231,6 +231,7 @@ class tool_qtypeorder_form extends moodleform {
                 $params = array($questionid);
                 if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where ORDER BY $order", $params)) {
 
+                    uasort($datas, array($this, 'sort_step_data'));
                     foreach ($datas as $data) {
 
                         $id = $data->questionattemptid;
@@ -240,7 +241,7 @@ class tool_qtypeorder_form extends moodleform {
                                 $question_attempt->questionsummary = preg_replace($qsummary_search, '', $question_attempt->questionsummary);
                                 $question_attempt->rightanswer     = '';
                                 $question_attempt->responsesummary = '';
-                                $DB->insert_record('question_attempts', $question_attempt);
+                                $DB->update_record('question_attempts', $question_attempt);
                             }
                         }
 
@@ -309,8 +310,57 @@ class tool_qtypeorder_form extends moodleform {
         $rs->close();
 
         if ($reset_caches) {
-            $DB->purge_all_caches();
+            purge_all_caches();
         }
+    }
+
+    /**
+     * sort_step_data
+     *
+     * @param object $a record from DB table: question_attempt_step_data
+     * @param object $b record from DB table: question_attempt_step_data
+     */
+    protected function sort_step_data($a, $b) {
+        // compare numeric sort fields
+        $fields = array('questionusageid', 'slot', 'sequencenumber');
+        foreach ($fields as $field) {
+            if ($a->$field < $b->$field) {
+                return -1;
+            }
+            if ($a->$field > $b->$field) {
+                return 1;
+            }
+        }
+        // numeric fields are all the same, so
+        // compare sort value of "name" field
+        $a_num = $this->sort_step_data_num($a);
+        $b_num = $this->sort_step_data_num($b);
+        if ($a_num < $b_num) {
+            return -1;
+        }
+        if ($a_num > $b_num) {
+            return 1;
+        }
+        return 0; // everything equal - shouldn't happen !!
+    }
+
+    /**
+     * sort_step_data_num
+     *
+     * @param object $x record from DB table: question_attempt_step_data
+     * @return integer a sort number for step data records of qtype_order questions
+     */
+    protected function sort_step_data_num($x) {
+        switch ($x->name) {
+            case '_currentresponse':
+            case '_stemorder':   return -2;
+            case '_correctresponse':
+            case '_choiceorder': return -1;
+        }
+        if (substr($x->name, 0, 3)=='sub') {
+            return intval(substr($x->name, 3));
+        }
+        return 0; // unknown step data name
     }
 
     /**
