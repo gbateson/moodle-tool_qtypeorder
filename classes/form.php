@@ -284,9 +284,9 @@ class tool_qtypeorder_form extends moodleform {
                                     if ($i==$i_min) {
                                         $md5keys = array();
                                     }
-                                    if ($id = intval($data->value)) {
-                                        $id = $currentresponse[$id-1];
-                                        $md5keys[$i] = $subs[$id]->md5key;
+                                    if ($pos = intval($data->value)) {
+                                        $id = $currentresponse[$i];
+                                        $md5keys[$pos] = $subs[$id]->md5key;
                                     }
                                     if ($i==$i_max) {
                                         // update this $data record
