@@ -43,6 +43,10 @@ echo $OUTPUT->header();
 
 echo $OUTPUT->heading(get_string('pluginname', 'tool_qtypeorder'));
 
+if ($form->is_submitted() && $form->is_validated()) {
+    $form->migrate_qtype_order();
+}
+
 echo $OUTPUT->box_start(array('class' => 'nottoowide'));
 if ($count = $DB->get_field_sql('SELECT COUNT(*) FROM {question_order}')) {
     $text = get_string('pluginname_help', 'tool_qtypeorder', $count);
@@ -54,9 +58,6 @@ echo $OUTPUT->notification($text);
 echo $OUTPUT->box_end();
 
 if ($count) {
-    if ($form->is_submitted() && $form->is_validated()) {
-        $form->migrate_qtype_order();
-    }
     $form->display();
 }
 

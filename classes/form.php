@@ -89,7 +89,7 @@ class tool_qtypeorder_form extends moodleform {
         }
 
         $feedbackfields = array('correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback');
-        $reset_caches = false;
+        $purge_caches = false;
 
         // search/replace strings to remove tags from simple <p>...</p> in question text
         $qtext_search = '/^\s*<p>\s*([^<>]*)\s*<\/p>\s*$/';
@@ -97,6 +97,10 @@ class tool_qtypeorder_form extends moodleform {
 
         // search string to locate qtype_order info in question summary
         $qsummary_search = '/\s*\{[^\}]*\}\s*$/';
+
+        // cache the SQL to determine the length of the name field
+        // this is used for "natural sorting" of the step data
+        $sql_length_dname = $DB->sql_length('d.name');
 
         // password salt may be needed to create unique md5 keys
         if (isset($CFG->passwordsaltmain)) {
@@ -193,8 +197,7 @@ class tool_qtypeorder_form extends moodleform {
                     // define the order of the correct response
                     //  - referred to as "choiceorder" in qtype_order
                     //  - should be the same as the "_choiceorder" step data
-                    $correctresponse = array_merge(array(0), array_keys($subs));
-                    unset($correctresponse[0]); // remove item with index 0
+                    $correctresponse = array_keys($subs);
 
                     // initialize the order of the current response
                     //  - referred to as "stemorder" in qtype_order
@@ -204,15 +207,15 @@ class tool_qtypeorder_form extends moodleform {
 
                     // set names of first and last attempt_step_data records
                     // that are used to denote the current order of items
-                    $firstname = 'sub0';
-                    $lastname = 'sub'.(count($subs) - 1);
+                    $i_min = 0;
+                    $i_max = (count($subs) - 1);
 
                 } else {
                     // shouldn't happen !!
                     $correctresponse = array();
                     $currentresponse = array();
-                    $firstname = '';
-                    $lastname = '';
+                    $i_min = -1;
+                    $i_max = -1;
                 }
 
                 // initialize array use to hold unique md5keys for answers
@@ -227,33 +230,32 @@ class tool_qtypeorder_form extends moodleform {
                           'LEFT JOIN {question_attempt_steps} s ON s.id = d.attemptstepid '.
                           'LEFT JOIN {question_attempts} a ON a.id = s.questionattemptid';
                 $where  = 'a.questionid = ?';
-                $order  = 'a.questionusageid, a.slot, s.sequencenumber, d.name';
+                $order  = "a.questionusageid, a.slot, s.sequencenumber, $sql_length_dname, d.name"; // natural sort of d.name
                 $params = array($questionid);
                 if ($datas = $DB->get_records_sql("SELECT $select FROM $from WHERE $where ORDER BY $order", $params)) {
 
-                    uasort($datas, array($this, 'sort_step_data'));
                     foreach ($datas as $data) {
 
                         $id = $data->questionattemptid;
                         if (empty($question_attempts[$id])) {
                             $question_attempts[$id] = true;
-                            if ($question_attempt = $DB->get_record('question_attempts', array('id' => $id))) {
-                                $question_attempt->questionsummary = preg_replace($qsummary_search, '', $question_attempt->questionsummary);
-                                $question_attempt->rightanswer     = '';
-                                $question_attempt->responsesummary = '';
-                                $DB->update_record('question_attempts', $question_attempt);
+                            if ($attempt = $DB->get_record('question_attempts', array('id' => $id))) {
+                                $attempt->questionsummary = preg_replace($qsummary_search, '', $attempt->questionsummary);
+                                $attempt->rightanswer     = '';
+                                $attempt->responsesummary = '';
+                                $DB->update_record('question_attempts', $attempt);
                             }
                         }
 
                         switch ($data->name) {
 
-                            case '_choiceorder':
-                                $this->convert_step_data($subs, $data, '_correctresponse', $correctresponse);
+                            case '_stemorder': // the order displayed at the start of this attempt
+                                $this->convert_step_data($subs, $data, '_currentresponse', $currentresponse);
+                                $i_max = (count($currentresponse) - 1);
                                 break;
 
-                            case '_stemorder':
-                                $this->convert_step_data($subs, $data, '_currentresponse', $currentresponse);
-                                $lastname = 'sub'.(count($currentresponse) - 1);
+                            case '_choiceorder': // the correct order
+                                $this->convert_step_data($subs, $data, '_correctresponse', $correctresponse);
                                 break;
 
                             case '_correctresponse':
@@ -272,20 +274,25 @@ class tool_qtypeorder_form extends moodleform {
                                 $this->revert_step_data($subs, $data, $currentresponse);
                                 break;
 
+                            case '-finish':
+                                // do nothing
+                                break;
+
                             default:
                                 if (substr($data->name, 0, 3)=='sub') {
-                                    if ($data->name==$firstname) {
+                                    $i = intval(substr($data->name, 3));
+                                    if ($i==$i_min) {
                                         $md5keys = array();
                                     }
-                                    $i = intval(substr($data->name, 3));
                                     if ($id = intval($data->value)) {
                                         $id = $currentresponse[$id-1];
                                         $md5keys[$i] = $subs[$id]->md5key;
                                     }
-                                    if ($data->name==$lastname) {
+                                    if ($i==$i_max) {
                                         // update this $data record
                                         ksort($md5keys);
                                         $this->update_step_data($data, 'response_'.$questionid, implode(',', $md5keys));
+                                        $md5keys = array();
                                     } else {
                                         // remove this $data record
                                         $this->delete_step_data($data);
@@ -298,8 +305,8 @@ class tool_qtypeorder_form extends moodleform {
                     } // end foreach $datas
                 } // end if $datas
 
-                // force caches to be refreshed
-                $reset_caches = true;
+                // force caches to be purged
+                $purge_caches = true;
 
             } // end if insert_record
 
@@ -309,58 +316,9 @@ class tool_qtypeorder_form extends moodleform {
         } // end foreach $rs
         $rs->close();
 
-        if ($reset_caches) {
+        if ($purge_caches) {
             purge_all_caches();
         }
-    }
-
-    /**
-     * sort_step_data
-     *
-     * @param object $a record from DB table: question_attempt_step_data
-     * @param object $b record from DB table: question_attempt_step_data
-     */
-    protected function sort_step_data($a, $b) {
-        // compare numeric sort fields
-        $fields = array('questionusageid', 'slot', 'sequencenumber');
-        foreach ($fields as $field) {
-            if ($a->$field < $b->$field) {
-                return -1;
-            }
-            if ($a->$field > $b->$field) {
-                return 1;
-            }
-        }
-        // numeric fields are all the same, so
-        // compare sort value of "name" field
-        $a_num = $this->sort_step_data_num($a);
-        $b_num = $this->sort_step_data_num($b);
-        if ($a_num < $b_num) {
-            return -1;
-        }
-        if ($a_num > $b_num) {
-            return 1;
-        }
-        return 0; // everything equal - shouldn't happen !!
-    }
-
-    /**
-     * sort_step_data_num
-     *
-     * @param object $x record from DB table: question_attempt_step_data
-     * @return integer a sort number for step data records of qtype_order questions
-     */
-    protected function sort_step_data_num($x) {
-        switch ($x->name) {
-            case '_currentresponse':
-            case '_stemorder':   return -2;
-            case '_correctresponse':
-            case '_choiceorder': return -1;
-        }
-        if (substr($x->name, 0, 3)=='sub') {
-            return intval(substr($x->name, 3));
-        }
-        return 0; // unknown step data name
     }
 
     /**
