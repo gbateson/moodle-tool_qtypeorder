@@ -32,3 +32,4 @@
 .path-admin-tool-qtypeorder table.users tr.even { background-color: #ffffee; }
 .path-admin-tool-qtypeorder table.users th,
 .path-admin-tool-qtypeorder table.users td { border: 1px solid black; border-collapse: collapse; text-align: center; }
+.path-admin-tool-qtypeorder .progressbar_container { margin: 0px; }

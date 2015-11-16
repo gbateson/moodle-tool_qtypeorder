@@ -115,7 +115,7 @@ class tool_qtypeorder_form extends moodleform {
         // set up progress bar
         $index = 0;
         $bar = new progress_bar('fixsumgrades', 500, true);
-        $strupdating = get_string('migratingorderquestions', 'tool_qtypeorder');
+        $strupdating = get_string('migratingquestions', 'tool_qtypeorder');
 
         // migrate each $order record
         foreach ($rs as $order) {
