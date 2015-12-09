@@ -54,7 +54,7 @@ $text = '';
 $count = 0;
 $dbman = $DB->get_manager();
 if ($dbman->table_exists('qtype_ordering_options')) {
-    if ($dbman->table_exists('question_orderxxx')) {
+    if ($dbman->table_exists('question_order')) {
         if ($count = $DB->get_field_sql('SELECT COUNT(*) FROM {question_order}')) {
             $text = get_string('pluginname_help', $plugin, $count);
         } else {
