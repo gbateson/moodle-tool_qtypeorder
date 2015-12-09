@@ -38,4 +38,8 @@ To run this tool ...
 
 There are currently {$a} OLD Ordering questions on this Moodle site.';
 $string['migratingquestions'] = 'Migrating questions';
-$string['noquestions'] = 'There are no OLD ordering questions on this Moodle site, so the migration cannot continue.';
+$string['cannotcontinue'] = 'Sorry, at this time the migration of question types on this Moodle site cannot continue.';
+$string['noorderingtable'] = 'The database tables for the NEW Ordering question type, qtype_ordering, are missing. Perhaps the "qtype_ordering" plugin is not installed?';
+$string['noordertable'] = 'The database tables for the OLD Ordering question type, qtype_order, are missing. Perhaps the "qtype_order" plugin is not installed?';
+$string['noquestions'] = 'There are no OLD ordering questions.';
+

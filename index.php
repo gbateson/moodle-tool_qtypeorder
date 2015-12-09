@@ -41,17 +41,33 @@ if ($form->is_cancelled()) {
 
 echo $OUTPUT->header();
 
-echo $OUTPUT->heading(get_string('pluginname', 'tool_qtypeorder'));
+$plugin = 'tool_qtypeorder';
+echo $OUTPUT->heading(get_string('pluginname', $plugin));
 
 if ($form->is_submitted() && $form->is_validated()) {
     $form->migrate_qtype_order();
 }
 
 echo $OUTPUT->box_start(array('class' => 'nottoowide'));
-if ($count = $DB->get_field_sql('SELECT COUNT(*) FROM {question_order}')) {
-    $text = get_string('pluginname_help', 'tool_qtypeorder', $count);
+
+$text = '';
+$count = 0;
+$dbman = $DB->get_manager();
+if ($dbman->table_exists('qtype_ordering_options')) {
+    if ($dbman->table_exists('question_orderxxx')) {
+        if ($count = $DB->get_field_sql('SELECT COUNT(*) FROM {question_order}')) {
+            $text = get_string('pluginname_help', $plugin, $count);
+        } else {
+            $text = get_string('noquestions', $plugin);
+        }
+    } else {
+        $text = get_string('noordertable', $plugin);
+    }
 } else {
-    $text = get_string('noquestions', 'tool_qtypeorder');
+    $text = get_string('noorderingtable', $plugin);
+}
+if ($count==0) {
+    $text = '**'.get_string('cannotcontinue', $plugin)."**\n\n* $text";
 }
 $text = format_text($text, FORMAT_MARKDOWN);
 echo $OUTPUT->notification($text);
