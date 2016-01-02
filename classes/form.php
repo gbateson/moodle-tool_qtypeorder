@@ -132,6 +132,7 @@ class tool_qtypeorder_form extends moodleform {
                 'layouttype'  => $layouttype,
                 'selecttype'  => 0, // ALL
                 'selectcount' => 0,
+                'gradingtype' => 0, // ABSOLUTE mimics the behavior of qtype_match grading used by qtype_order
             );
 
             // add feedback fields - cautiously :-)
