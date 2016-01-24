@@ -94,7 +94,7 @@ class tool_qtypeorder_form extends moodleform {
         // detect "question_states" table  (Moodle <= 2.1)
         $question_states_exists = $dbman->table_exists('question_states');
 
-        // detect "question_states" table  (Moodle >= 2.2)
+        // detect "question_attempt_steps" table  (Moodle >= 2.2)
         $question_attempt_steps_exists = $dbman->table_exists('question_attempt_steps');
 
         // the names of feedback fields to be transferred from OLD to NEW question
@@ -130,9 +130,11 @@ class tool_qtypeorder_form extends moodleform {
             $ordering = (object)array(
                 'questionid'  => $questionid,
                 'layouttype'  => $layouttype,
-                'selecttype'  => 0, // ALL
+                'selecttype'  => 0, // qtype_ordering_question::SELECT_ALL
                 'selectcount' => 0,
-                'gradingtype' => 0, // ABSOLUTE mimics the behavior of qtype_match grading used by qtype_order
+                'gradingtype' => 0, // qtype_ordering_question::GRADING_ABSOLUTE_POSITION
+                                    // mimics the behavior of grading in qtype_match
+                                    // that is also used by qtype_order questions
             );
 
             // add feedback fields - cautiously :-)
