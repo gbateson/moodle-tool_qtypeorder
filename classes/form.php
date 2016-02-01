@@ -44,7 +44,11 @@ class tool_qtypeorder_form extends moodleform {
      * constructor
      */
     public function tool_qtypeorder_form($action=null, $customdata=null, $method='post', $target='', $attributes=null, $editable=true) {
-        parent::moodleform($action, $customdata, $method, $target, $attributes, $editable);
+        if (method_exists('moodleform', '__construct')) {
+            parent::__construct($action, $customdata, $method, $target, $attributes, $editable);
+        } else {
+            parent::moodleform($action, $customdata, $method, $target, $attributes, $editable);
+        }
     }
 
     /**
