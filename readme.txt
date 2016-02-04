@@ -65,7 +65,9 @@ Usage
 (3) Set "Confirm" to "Yes"
 (4) click the "Go" button
 
-When all the OLD Ordering questions have been converted to NEW Ordering questions, and there are no OLD Ordering questions left, the OLD Ordering question plugin, "qtype_order", can be uninstalled.
+When all the OLD Ordering questions have been converted to NEW Ordering questions,
+and there are no OLD Ordering questions left, the OLD Ordering question plugin,
+"qtype_order", can be uninstalled.
 
 =======================
 Acknowledgements
