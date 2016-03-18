@@ -26,6 +26,6 @@
 defined('MOODLE_INTERNAL') || die;
 
 if ($hassiteconfig) {
-    $ADMIN->add('development', new admin_externalpage('toolqtypeorder', get_string('pluginname', 'tool_qtypeorder'),
-                                                      $CFG->wwwroot.'/'.$CFG->admin.'/tool/qtypeorder/index.php'));
+    $ADMIN->add('tools', new admin_externalpage('toolqtypeorder', get_string('pluginname', 'tool_qtypeorder'),
+                                                $CFG->wwwroot.'/'.$CFG->admin.'/tool/qtypeorder/index.php'));
 }
