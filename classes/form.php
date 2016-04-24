@@ -123,6 +123,8 @@ class tool_qtypeorder_form extends moodleform {
         $bar = new progress_bar('tool_qtypeorder', 500, true);
         $strupdating = get_string('migratingquestions', 'tool_qtypeorder');
 
+        $fs = get_file_storage();
+
         // migrate each $order record
         foreach ($rs as $order) {
             //upgrade_set_timeout(); // 3 mins
@@ -155,6 +157,11 @@ class tool_qtypeorder_form extends moodleform {
                     $ordering->$feedbackfield = FORMAT_MOODLE;
                 }
             }
+
+            $sql = "SELECT qc.*
+                FROM {question_categories} qc, {question} q
+                WHERE qc.id = q.category AND q.id = :id";
+            $category = $DB->get_record_sql($sql, array('id' => $questionid));
 
             // insert the new $ordering record
             if ($ordering->id = $DB->insert_record('qtype_ordering_options', $ordering)) {
@@ -198,6 +205,17 @@ class tool_qtypeorder_form extends moodleform {
                                 'feedbackformat' => FORMAT_MOODLE
                             );
                             $answer->id = $DB->insert_record('question_answers', $answer);
+
+                            $files = $fs->get_area_files($category->contextid, 'qtype_order', 'subquestion', $sub->id);
+                            foreach ($files as $file) {
+                                $newfile = new stdClass();
+                                $newfile->contextid = $category->contextid;
+                                $newfile->component = 'question';
+                                $newfile->filearea = 'answer';
+                                $newfile->itemid = $answer->id;
+                                $fs->create_file_from_storedfile($newfile, $file);
+                            }
+                            $fs->delete_area_files($category->contextid, 'qtype_order', 'subquestion', $sub->id);
                         }
 
                         // add id to list of correct answers
