@@ -123,6 +123,7 @@ class tool_qtypeorder_form extends moodleform {
         $bar = new progress_bar('tool_qtypeorder', 500, true);
         $strupdating = get_string('migratingquestions', 'tool_qtypeorder');
 
+        // file storage may be required for migrating files in answers
         $fs = get_file_storage();
 
         // migrate each $order record
@@ -158,9 +159,11 @@ class tool_qtypeorder_form extends moodleform {
                 }
             }
 
-            $sql = "SELECT qc.*
-                FROM {question_categories} qc, {question} q
-                WHERE qc.id = q.category AND q.id = :id";
+            // get question_category for this question
+            // ($category->contextid is needed to get files)
+            $sql = 'SELECT qc.* '.
+                   'FROM {question_categories} qc, {question} q '.
+                   'WHERE qc.id = q.category AND q.id = :id';
             $category = $DB->get_record_sql($sql, array('id' => $questionid));
 
             // insert the new $ordering record
@@ -208,11 +211,12 @@ class tool_qtypeorder_form extends moodleform {
 
                             $files = $fs->get_area_files($category->contextid, 'qtype_order', 'subquestion', $sub->id);
                             foreach ($files as $file) {
-                                $newfile = new stdClass();
-                                $newfile->contextid = $category->contextid;
-                                $newfile->component = 'question';
-                                $newfile->filearea = 'answer';
-                                $newfile->itemid = $answer->id;
+                                $newfile = (object)array(
+                                    'contextid' => $category->contextid,
+                                    'component' => 'question',
+                                    'filearea'  => 'answer',
+                                    'itemid'    => $answer->id
+                                );
                                 $fs->create_file_from_storedfile($newfile, $file);
                             }
                             $fs->delete_area_files($category->contextid, 'qtype_order', 'subquestion', $sub->id);
