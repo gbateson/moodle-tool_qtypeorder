@@ -61,7 +61,7 @@ Usage
 =======================
 
 (1) login to your Moodle site as administrator
-(2) navigate to: Administration -> Site administration -> Development -> Migrate Ordering Questions
+(2) navigate to: Administration -> Site administration -> Plugins -> Admin tools -> Migrate Ordering questions
 (3) Set "Confirm" to "Yes"
 (4) click the "Go" button
 
