@@ -28,5 +28,5 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'tool_qtypeorder';
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->requires  = 2011120500; // Moodle >= 2.2
-$plugin->version   = 2019101215;
-$plugin->release   = '2019-10-12 (15)';
+$plugin->version   = 2019111016;
+$plugin->release   = '2019-11-10 (16)';

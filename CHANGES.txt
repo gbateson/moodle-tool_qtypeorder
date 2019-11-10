@@ -2,23 +2,23 @@
 Change log for tool_qtypeorder
 ========================================
 
+2019-11-10 (16)
+ - standardize layout and spelling in CHANGES.txt
+
 2017-03-03 (14)
- -  correct faulty information in the readme.txt file about where this plugin is located in the Moodle administration block 
+ - correct faulty information in the readme.txt file about where this plugin is located in the Moodle administration block
 
 2016-08-24 (13)
- -  standardize 'die;' to 'die();' 
+ - standardize 'die;' to 'die();'
 
 2016-04-25 (12)
- -  Migrating files, attached to answers (merged from Vadimonus - many thanks\!) 
+ - Migrating files, attached to answers (merged from Vadimonus - many thanks\!)
 
 2016-03-18 (11)
- -  move this item to Plugins -> Admin tools in navigation menu 
+ - move this item to Plugins -> Admin tools in navigation menu
 
 2016-03-17 (10)
- -  tool/creatusers + fixlinks + qtypeorder rename constructor to "__construct" as required by PHP >= 7.0 
+ - rename constructor to "__construct" as required by PHP >= 7.0
 
 2016-02-04 (09)
- -  tool/creatusers + fixlinks + qtypeorder rename constructor to "__construct" as required by PHP >= 7.0 
-
-2016-02-04 (09)
- -  tool/qtypeorder add to SVN repository 
+ - add to SVN repository
