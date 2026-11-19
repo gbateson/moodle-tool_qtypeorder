@@ -15,17 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Link to unsupported db qtypeorder script.
+ * Admin menu entry.
  *
- * @package    tool
- * @subpackage qtypeorder
- * @copyright  2015 Gordon Bateson {@link http://quizport.com}
+ * @package    tool_qtypeorder
+ * @copyright  2015 Gordon Bateson, 2026 updated for Moodle 3.9 to 4.5
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $ADMIN->add('tools', new admin_externalpage('toolqtypeorder', get_string('pluginname', 'tool_qtypeorder'),
-                                                $CFG->wwwroot.'/'.$CFG->admin.'/tool/qtypeorder/index.php'));
+    $ADMIN->add('tools', new admin_externalpage(
+        'toolqtypeorder',
+        get_string('pluginname', 'tool_qtypeorder'),
+        new moodle_url('/admin/tool/qtypeorder/index.php')
+    ));
 }

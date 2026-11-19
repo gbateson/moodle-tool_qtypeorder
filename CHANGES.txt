@@ -2,6 +2,29 @@
 Change log for tool_qtypeorder
 ========================================
 
+2026-11-18 (3.9 to 4.5, beta)
+ - also supports Moodle 3.9 to 4.4: uses question.category before Moodle 4.0, and quiz_slots for the
+   course filter
+ - runs on PHP 7.2 and later (Moodle 3.9's minimum)
+ - warns that "show number correct" will be dropped when the installed qtype_ordering doesn't have it
+   (qtype_ordering releases for Moodle 3.x)
+ - clearer undo refusal when attempts were regraded on Moodle 3.9
+ - test harness runs on Moodle 3.9, 4.1 and 4.5
+
+2026-11-17 (4.5-beta)
+ - rewritten for Moodle 4.5 (fork of gbateson/moodle-tool_qtypeorder)
+ - fix "Unknown column 'q.category'": find categories via question_versions / question_bank_entries
+ - keep behaviour data (manual grades, comments, submit/finish) in attempts; only touch qtype_order variables
+ - sort items by numeric position (10+ item questions were mis-ordered)
+ - decode qtype_order 2012070400 responses via _choiceorder, handle partial, duplicate and "I don't know" answers
+ - fix feedback text being overwritten with the format number
+ - one transaction per question; regenerate attempt summaries via qtype_ordering
+ - new modes: preview, simulate (convert + check + roll back), migrate (with undo backup and
+   self-check), check converted, undo
+ - target questions by id list, course, category, limit; per-attempt detail report
+ - CLI script for large sites; privacy provider; manual test harness in tests/manual
+
+
 2019-11-10 (16)
  - standardize layout and spelling in CHANGES.txt
 

@@ -1,4 +1,4 @@
-/**
+<?php
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -13,23 +13,24 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
- */
+
+namespace tool_qtypeorder\privacy;
 
 /**
- * admin/tool/qtypeorder/styles.css
+ * Privacy provider: this tool stores no personal data of its own.
  *
- * @package    tool
- * @subpackage qtypeorder
- * @copyright  2015 Gordon Bateson {@link http://quizport.com}
+ * @package    tool_qtypeorder
+ * @copyright  2026 updated for Moodle 3.9 to 4.5
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @since      Moodle 2.0
  */
+class provider implements \core_privacy\local\metadata\null_provider {
 
-.path-admin-tool-qtypeorder div.nottoowide { max-width: 480px; }
-
-.path-admin-tool-qtypeorder table.users tr.headings { background-color: #eebbee; }
-.path-admin-tool-qtypeorder table.users tr.odd { background-color: #eeeeaa; }
-.path-admin-tool-qtypeorder table.users tr.even { background-color: #ffffee; }
-.path-admin-tool-qtypeorder table.users th,
-.path-admin-tool-qtypeorder table.users td { border: 1px solid black; border-collapse: collapse; text-align: center; }
-.path-admin-tool-qtypeorder .progressbar_container { margin: 0px; }
+    /**
+     * Reason string id.
+     *
+     * @return string
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
+}

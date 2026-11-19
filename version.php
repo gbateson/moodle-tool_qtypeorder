@@ -17,16 +17,16 @@
 /**
  * Version details.
  *
- * @package    tool
- * @subpackage qtypeorder
- * @copyright  2015 Gordon Bateson {@link http://quizport.com}
+ * @package    tool_qtypeorder
+ * @copyright  2015 Gordon Bateson, 2026 updated for Moodle 3.9 to 4.5
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tool_qtypeorder';
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->requires  = 2011120500; // Moodle >= 2.2
-$plugin->version   = 2019111016;
-$plugin->release   = '2019-11-10 (16)';
+$plugin->maturity  = MATURITY_BETA;
+$plugin->requires  = 2020061500; // Moodle 3.9.
+$plugin->supported = [39, 405];
+$plugin->version   = 2026111800;
+$plugin->release   = '3.9 to 4.5, beta (2026-11-18)';
